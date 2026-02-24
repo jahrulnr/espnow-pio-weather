@@ -1,24 +1,44 @@
-# ESP-NOW Slave (Sensor + Weather Client)
+# ESP-NOW Slave — Sensor & Weather Client
 
-Firmware slave untuk mengirim sensor lokal, meminta data cuaca lewat proxy master, lalu mengirim hasil weather terstruktur kembali ke master.
+This firmware implements an ESP-NOW slave that reports local sensor data, requests weather information via a master proxy, and sends structured weather state back to the master.
 
-## Ringkasan
+Overview
+--------
 
-- ESP-NOW slave yang meminta data cuaca melalui master-proxy dan mengirim state kembali ke master.
-- Menyertakan pipeline untuk menerima chunked proxy responses dan menyusun `WeatherState`.
+- Device scans ESP-NOW channels and locks to a master beacon.
+- Registers with the master and sends binary states: `Identity`, `Sensor`, `Weather`, `SlaveAlive`.
+- Requests weather data from Open-Meteo through the master proxy and receives chunked binary responses which are reassembled by a pipeline.
 
-## Lokasi file penting
+Key files
+---------
 
 - Entrypoint: `src/main.cpp`
-- ESP-NOW logic: `src/app/espnow/slave.cpp`
+- ESP-NOW slave logic: `src/app/espnow/slave.cpp`
 - Weather pipeline: `src/app/espnow/weather_pipeline.cpp`
-- Weather locations: `src/app/weather/open_meteo_locations.cpp`
+- Open-Meteo locations/URLs: `src/app/weather/open_meteo_locations.cpp`
 
-## Konfigurasi
+Wire protocol
+-------------
 
-Edit `include/app_config.h` untuk identitas perangkat, pengaturan DHT, dan indeks area cuaca.
+See `src/app/espnow/state_binary.h` for the binary wire formats.
 
-## Build & Flash (example)
+Outbound (`PacketType::STATE`): `IdentityState`, `SensorState`, `WeatherState`, `SlaveAliveState`, `ProxyReqState`.
+
+Inbound (`PacketType::COMMAND`): `ProxyRespChunkCommand`, `WeatherSyncReqCommand`.
+
+Configuration
+-------------
+
+Edit `include/app_config.h` for device identity and feature toggles:
+
+- `DEVICE_NAME`
+- DHT settings: `DHT_SENSOR_ENABLED`, `DHT_SENSOR_PIN`, `DHT_SENSOR_IS_DHT22`, `DHT_READ_INTERVAL_MS`
+- Weather settings: `WEATHER_REPORT_ENABLED`, `WEATHER_AREA_INDEX`, `WEATHER_REPORT_INTERVAL_MS`, `WEATHER_PROXY_REQUEST_INTERVAL_MS`
+
+Build & flash
+-------------
+
+Example (PlatformIO):
 
 ```bash
 platformio run -e wemos-lolin32-lite
@@ -26,81 +46,16 @@ platformio run -e wemos-lolin32-lite -t upload --upload-port /dev/ttyUSB0
 platformio device monitor -e wemos-lolin32-lite --port /dev/ttyUSB0
 ```
 
-## Notes
+Notes
+-----
 
-- Slave hanya menerima paket dari master yang tervalidasi.
-- Weather proxy responses dikirim dalam chunk dan di-reassemble oleh pipeline.
+- The slave only accepts commands from a validated master beacon.
+- If the master times out, the slave returns to channel-scan mode.
+- Proxy responses are received as ordered chunks and reassembled by the `weather_pipeline` task.
 
-## Related repositories
+Related repositories
+--------------------
 
 - ESP-NOW Master (gateway): https://github.com/jahrulnr/espnow-pio-master.git
 - ESP-NOW Weather (this repo): https://github.com/jahrulnr/espnow-pio-weather.git
 - ESP-NOW Cam (camera slave): https://github.com/jahrulnr/espnow-pio-camera.git
-
----
-
-Jika mau, saya bisa tambahkan contoh `include/secret.h.example` atau instruksi board-by-board.
-# ESP-NOW Slave (Sensor + Weather Client)
-
-Firmware slave untuk mengirim sensor lokal, meminta data cuaca lewat proxy master, lalu mengirim hasil weather terstruktur kembali ke master.
-
-## Ringkasan Peran
-
-Slave bertugas untuk:
-- Scan channel 1-13 sampai menemukan beacon master (`HELLO`/`HEARTBEAT`).
-- Lock ke master yang valid (`MASTER_BEACON_ID`) dan register peer.
-- Kirim state biner `Identity`, `Sensor`, dan `Weather` ke master.
-- Kirim `ProxyReqState` untuk ambil data weather (Open-Meteo) via master.
-- Menerima command chunk `ProxyRespChunk`, reassemble, parse `current_weather`, lalu publish `WeatherState`.
-- Merespons command `WeatherSyncReq` dari master untuk refresh cuaca paksa.
-
-## Arsitektur Runtime
-
-# ESP-NOW Slave — Sensor & Weather Client
-
-Firmware ESP-NOW slave untuk perangkat sensor yang meminta data cuaca melalui master-proxy, lalu mengirimkan state terstruktur kembali ke master.
-
-Highlights:
-- ESP-NOW slave (channel scan, master lock, peer register)
-- Mengirim `Identity`, `Sensor`, `Weather`, dan `SlaveAlive` state
-- Proxy request/response untuk mengambil data Open-Meteo melalui master
-
-Quick Links:
-- Entrypoint: `src/main.cpp`
-- ESP-NOW logic: `src/app/espnow/slave.cpp`
-- Weather pipeline: `src/app/espnow/weather_pipeline.cpp`
-- Weather locations: `src/app/weather/open_meteo_locations.cpp`
-
-Protocol summary:
-- Wire structs: `src/app/espnow/state_binary.h`
-- Outbound (`PacketType::STATE`): `IdentityState`, `SensorState`, `WeatherState`, `SlaveAliveState`, `ProxyReqState`
-- Inbound (`PacketType::COMMAND`): `ProxyRespChunkCommand`, `WeatherSyncReqCommand`
-
-Configuration:
-- Edit `include/app_config.h` for device identity and feature toggles (`DEVICE_NAME`, DHT settings, `WEATHER_AREA_INDEX`, intervals).
-
-Supported build environments (examples):
-- `wemos-lolin32-lite`
-- `esp32-c3-super-mini`
-
-Build & flash (example):
-```bash
-# build
-platformio run -e wemos-lolin32-lite
-# upload (replace port with your device)
-platformio run -e wemos-lolin32-lite -t upload --upload-port /dev/ttyUSB0
-# monitor serial
-platformio device monitor -e wemos-lolin32-lite --port /dev/ttyUSB0
-```
-
-Notes:
-- Slave only accepts packets from a validated master beacon.
-- If master times out, slave returns to channel-scan mode.
-- Weather proxy responses arrive as chunks and are reassembled by `weather_pipeline`.
-
-License & contribution
-- See repository root for licensing and contribution guidance.
-
----
-
-If mau, saya bisa tambahkan petunjuk environment build per-board atau contoh konfigurasi `include/secret.h` (tanpa secrets).
