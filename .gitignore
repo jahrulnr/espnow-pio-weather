@@ -4,4 +4,4 @@
 /esp-skainet
 .github/*.md
 /tmp
-/include/secret.h
+/include/secret.hinclude/secret.h
