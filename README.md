@@ -2,6 +2,48 @@
 
 Firmware slave untuk mengirim sensor lokal, meminta data cuaca lewat proxy master, lalu mengirim hasil weather terstruktur kembali ke master.
 
+## Ringkasan
+
+- ESP-NOW slave yang meminta data cuaca melalui master-proxy dan mengirim state kembali ke master.
+- Menyertakan pipeline untuk menerima chunked proxy responses dan menyusun `WeatherState`.
+
+## Lokasi file penting
+
+- Entrypoint: `src/main.cpp`
+- ESP-NOW logic: `src/app/espnow/slave.cpp`
+- Weather pipeline: `src/app/espnow/weather_pipeline.cpp`
+- Weather locations: `src/app/weather/open_meteo_locations.cpp`
+
+## Konfigurasi
+
+Edit `include/app_config.h` untuk identitas perangkat, pengaturan DHT, dan indeks area cuaca.
+
+## Build & Flash (example)
+
+```bash
+platformio run -e wemos-lolin32-lite
+platformio run -e wemos-lolin32-lite -t upload --upload-port /dev/ttyUSB0
+platformio device monitor -e wemos-lolin32-lite --port /dev/ttyUSB0
+```
+
+## Notes
+
+- Slave hanya menerima paket dari master yang tervalidasi.
+- Weather proxy responses dikirim dalam chunk dan di-reassemble oleh pipeline.
+
+## Related repositories
+
+- ESP-NOW Master (gateway): https://github.com/jahrulnr/espnow-pio-master.git
+- ESP-NOW Weather (this repo): https://github.com/jahrulnr/espnow-pio-weather.git
+- ESP-NOW Cam (camera slave): https://github.com/jahrulnr/espnow-pio-camera.git
+
+---
+
+Jika mau, saya bisa tambahkan contoh `include/secret.h.example` atau instruksi board-by-board.
+# ESP-NOW Slave (Sensor + Weather Client)
+
+Firmware slave untuk mengirim sensor lokal, meminta data cuaca lewat proxy master, lalu mengirim hasil weather terstruktur kembali ke master.
+
 ## Ringkasan Peran
 
 Slave bertugas untuk:
