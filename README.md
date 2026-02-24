@@ -14,60 +14,51 @@ Slave bertugas untuk:
 
 ## Arsitektur Runtime
 
+# ESP-NOW Slave — Sensor & Weather Client
+
+Firmware ESP-NOW slave untuk perangkat sensor yang meminta data cuaca melalui master-proxy, lalu mengirimkan state terstruktur kembali ke master.
+
+Highlights:
+- ESP-NOW slave (channel scan, master lock, peer register)
+- Mengirim `Identity`, `Sensor`, `Weather`, dan `SlaveAlive` state
+- Proxy request/response untuk mengambil data Open-Meteo melalui master
+
+Quick Links:
 - Entrypoint: `src/main.cpp`
-- Node ESP-NOW: `src/app/espnow/slave.cpp`
-   - Channel scan/lock, handshake master, heartbeat response (`SlaveAliveState`).
-- Pipeline command weather async: `src/app/espnow/weather_pipeline.cpp`
-   - Queue + task terpisah untuk parse chunk agar callback receive tetap ringan.
-- Modul cuaca: `src/app/weather/open_meteo_locations.cpp`
-   - Builder URL Open-Meteo + persist request terakhir di LittleFS.
-- Sensor lokal: `src/app/sensor/dht_sensor.cpp`
+- ESP-NOW logic: `src/app/espnow/slave.cpp`
+- Weather pipeline: `src/app/espnow/weather_pipeline.cpp`
+- Weather locations: `src/app/weather/open_meteo_locations.cpp`
 
-## Protokol Saat Ini (Biner)
+Protocol summary:
+- Wire structs: `src/app/espnow/state_binary.h`
+- Outbound (`PacketType::STATE`): `IdentityState`, `SensorState`, `WeatherState`, `SlaveAliveState`, `ProxyReqState`
+- Inbound (`PacketType::COMMAND`): `ProxyRespChunkCommand`, `WeatherSyncReqCommand`
 
-Payload utama memakai struct biner (`src/app/espnow/state_binary.h`):
-- Ke master (`PacketType::STATE`): `IdentityState`, `SensorState`, `WeatherState`, `SlaveAliveState`, `ProxyReqState`
-- Dari master (`PacketType::COMMAND`): `ProxyRespChunkCommand`, `WeatherSyncReqCommand`
+Configuration:
+- Edit `include/app_config.h` for device identity and feature toggles (`DEVICE_NAME`, DHT settings, `WEATHER_AREA_INDEX`, intervals).
 
-`WeatherState` dikirim setelah field utama tersedia dari `current_weather`:
-- `code`
-- `time`
-- `temperature`
-- `windspeed`
-- `winddirection`
+Supported build environments (examples):
+- `wemos-lolin32-lite`
+- `esp32-c3-super-mini`
 
-## Alur Weather
-
-1. Slave kirim `IdentityState` saat baru linked ke master.
-2. Slave bangun URL Open-Meteo dari `WEATHER_AREA_INDEX`.
-3. Slave kirim `ProxyReqState` (HTTP GET) ke master.
-4. Master fetch internet dan kirim balik `ProxyRespChunkCommand`.
-5. `weather_pipeline` menyusun chunk berurutan per `requestId`.
-6. Pipeline parse `current_weather` lalu publish `WeatherState` ke master.
-
-## Konfigurasi Utama
-
-Edit `include/app_config.h`:
-- Identitas: `DEVICE_NAME`
-- DHT: `DHT_SENSOR_ENABLED`, `DHT_SENSOR_PIN`, `DHT_SENSOR_IS_DHT22`, `DHT_READ_INTERVAL_MS`
-- Weather: `WEATHER_REPORT_ENABLED`, `WEATHER_AREA_INDEX`, `WEATHER_REPORT_INTERVAL_MS`, `WEATHER_PROXY_REQUEST_INTERVAL_MS`
-
-## Build & Flash
-
-Pilih environment board sesuai device:
-
+Build & flash (example):
 ```bash
+# build
 platformio run -e wemos-lolin32-lite
-platformio run -e wemos-lolin32-lite -t upload --upload-port /dev/ttyACM1
-platformio device monitor -e wemos-lolin32-lite --port /dev/ttyACM1
+# upload (replace port with your device)
+platformio run -e wemos-lolin32-lite -t upload --upload-port /dev/ttyUSB0
+# monitor serial
+platformio device monitor -e wemos-lolin32-lite --port /dev/ttyUSB0
 ```
 
-Environment lain yang tersedia:
-- `esp32-c3-super-mini`
-- `wemos-lolin32-lite`
+Notes:
+- Slave only accepts packets from a validated master beacon.
+- If master times out, slave returns to channel-scan mode.
+- Weather proxy responses arrive as chunks and are reassembled by `weather_pipeline`.
 
-## Catatan Operasional
+License & contribution
+- See repository root for licensing and contribution guidance.
 
-- Slave hanya menerima paket dari master yang beacon ID-nya valid.
-- Jika master timeout, slave kembali ke mode scan channel otomatis.
-- Request cuaca terakhir disimpan di `/data/weather_last_report.txt` untuk bootstrap berikutnya.
+---
+
+If mau, saya bisa tambahkan petunjuk environment build per-board atau contoh konfigurasi `include/secret.h` (tanpa secrets).
