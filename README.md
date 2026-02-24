@@ -53,6 +53,11 @@ Notes
 - If the master times out, the slave returns to channel-scan mode.
 - Proxy responses are received as ordered chunks and reassembled by the `weather_pipeline` task.
 
+Schema
+------
+
+- Weather message schema diagram: ![Weather schema](docs/schema.png)
+
 Related repositories
 --------------------
 
