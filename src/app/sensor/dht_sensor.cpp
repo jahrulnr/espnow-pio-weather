@@ -75,9 +75,9 @@ bool DhtSensor::read(DhtReading& out) {
     }
 
     const uint32_t pulseStart = micros();
-    if (!waitForLevel(LOW, 120)) {
+    if (!waitForLevel(LOW, 2000)) {
       interrupts();
-      ESP_LOGW(TAG, "Timeout waiting DHT bit low");
+      ESP_LOGW(TAG, "Timeout waiting DHT bit low after %d tries", bitIndex);
       return false;
     }
 

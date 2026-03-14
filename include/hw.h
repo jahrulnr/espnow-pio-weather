@@ -1,0 +1,5 @@
+#pragma once
+
+#define DHT_SENSOR_PIN 5
+#define INPUT_BATTERY_ADC_PIN 32
+#define INPUT_BATTERY_CHARGE_PIN -1

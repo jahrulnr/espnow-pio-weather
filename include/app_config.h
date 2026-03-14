@@ -1,12 +1,9 @@
 #pragma once
+#include "hw.h"
 
 #define DEVICE_NAME "pio-weather"
 
-#define SCREEN_WIDTH 128
-#define SCREEN_HEIGHT 64
-
 #define DHT_SENSOR_ENABLED 1
-#define DHT_SENSOR_PIN 13
 #define DHT_SENSOR_IS_DHT22 0
 #define DHT_READ_INTERVAL_MS 15000
 
